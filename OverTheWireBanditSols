@@ -1,0 +1,149 @@
+Hostname: bandit.labs.overthewire.org
+
+1: boJ9jbbUNNfktd78OOpsqOltutMc3MY1
+2: CV1DtqXWVFXTvM2F0k09SHz0YwRINYA9
+3: UmHadQclWmgdLOKQ3YNgjWxGoRMb5luK
+4: pIwrPrtPN36QITSp3EQaw936yaFoFgAB
+5: koReBOKuIDDepwhWk7jZC0RTdopnAYKh
+6: DXjZPULLxYr17uwoI01bNLQbtFemEgo7
+7: HKBPTKQnIay4Fw76bEy8PVxKEDQRKTzs
+8: cvX2JJa4CFALtqS87jk27qwqGhBM9plV
+9: UsvVyFSfZZWbi6wgC7dAFyFuR6jQQUhR
+10: truKLdjsbJ5g7yyJ2X2R0o3a5HQJFuLk
+11: IFukwKGsFW8MOq3IRFqrxE1hxTNEbUPR
+12: 5Te8Y4drgCRfCx8ugdwuEX8KFC6k2EUu
+13: 8ZjyCRiBWFYkneahHwxCv3wb2a1ORpYL
+14: 4wcYUJFw0k0XLShlDzztnTBHiqxU3b3e
+15: BfMYroe26WYalil77FoDi9qh59eK5xNr
+16: cluFn7wTiGryunymYOu4RcffSxQluehd
+17: xLYVMN9WE5zQ5vHacb0sZEVqbrp7nBTn
+18: kfBf3eYk5BPBRzwjqutbbfE887SVc5Yd
+19: IueksS7Ubh8G3DCwVzrTd8rAVOwq3M5x
+20: GbKksEFF4yrVs6il55v6gwY5aVje5f0j
+21: gE269g2h3mw3pwgrj0Ha9Uoqen1c9DGr
+22: Yk7owGAcWjwMVRwrTesJEwB7WVOiILLI
+23: jc1udXuA1tiHqjIsL8yaapX5XIAI6i0n
+24: UoMYTrfrBFHyQXmg6gzctqAwOmw1IohZ
+25: uNG9O58gUE7snukf3bvZ0rxhtnjzSGzG
+
+Useful commands:
+
+find -type f -size 33c -user bandit7  -group bandit6  |xargs ls -l
+
+8: cat data.txt|sort|uniq -u (For unique, duplicate lines 
+need to be next to each other, so the sort it required).
+
+9: strings data.txt|grep ^= (strings finds printable character
+strings at least 4 characters long and followed by an unprintable
+character. | pipes the result to grep which finds strings
+beginning with '=' due to regular expression '^='. 
+
+10: base64 -d data.txt (decode base64 data, -d option for
+decode).
+
+11: cat data.txt|tr 'A-Za-Z' 'N-ZA-Mn-za-m' (pipe the data.txt
+file to the tr command which performs a rot13).
+
+12: Used xxd -r to reverse hexdump, then file x.txt tells you the filetype,
+handy for knowing whether the file has been compressed using gzip
+or bzip2 or put together using tar. Use gunzip etc to 
+decompress.
+
+13: ssh -i deployment_key.txt bandit14@bandit.labs.overthewire.org
+Used above command to login through ssh using the private key.
+Key is stored in txt file. Had to change permissions on file
+for it to work (chmod 600 deployment_key.txt). Owner read
+and write only.
+
+14: nc localhost 30000 . Connect to port 30000 on the local
+host, in this case the server i'd remotely connected to
+via ssh. Then sent password through.
+
+15: openssl s_client -quiet -connect localhost:30001
+Connect to port 30001 using ssl encryption, -quiet means that
+less information about the session is printed to the screen.
+
+16: nmap -p 31000-32000 localhost (port scanning, checked which
+understand ssl manually, there should be better way to find out.)
+received key, saved it in rsaKey_bandit16.txt.
+
+17: diff passwords.new passwords.old (find differences in
+file). Can also use grep -Fvf passwords.old passwords.new.
+Order matters to receive the line that is different in new
+passwords file. -v gives non matching words.
+
+18: ssh bandit18@bandit.labs.overthewire.org "bash --noprofile --norc"
+The part "bash --noprofile --norc" prevented the .bashrc file 
+from executing and so stopped the log out. Then ls shows the
+readme. cat to read it and get the password.
+
+19: ls -l /etc/bandit_pass/bandit20 shows the password file
+can only be read by the owner bandit20. In the homedirectory
+there is a setuid binary which gives you the rights of the
+user bandit20. Use 
+	./bandit20-do cat /etc/bandit_pass/bandit20 
+to get password.
+
+20: In one window use:
+		 nc -l -p 8888 
+to create a server listening for connections to port 8888 on localhost.
+Then run ./suconnect 8888 in another window to connect to port
+8888, then send password through server to receive new password back. 
+
+21: View cronjob_bandit22, it changes permissions on file then
+writes the next password to it. Check the file location
+to find the password.
+
+22: Bash script gives location of password, its location is
+found using a piece of code from the script. The code 
+calculates the md5sum of the username and uses this to determine
+which file to write the password for that user to. So run,
+	
+	echo I am user bandit23 | md5sum | cut -d ' ' -f 1
+
+Then use cat to read the file /tmp/$result where $result is
+the previous commands result.
+
+23: The cron scheduled script executes all files in 
+/var/spool/bandit24 with user bandit24 permission, so can
+insert a script in the directory which will reveal the password
+using bandit24 privileges.
+
+create shell script B24script.sh using vim in /tmp which 
+executes,
+	cat /etc/bandit_pass/bandit24 > /tmp/B24psw 
+Change the permission of the file using chmod 777, 
+so that it can be executed by all users, then
+mv B24script.sh /var/spool/bandit24. 
+
+24: Used two scripts, one to brute force the pincode and send 
+the results to a temporary file. The second script continually
+checks this file for unique strings so that when the password
+is found it isn't missed in the consolation messages. To check
+the pins quicker I used four copies of the first script with
+the range over values to check split between them. Then
+retrieved the password via the second script.
+
+chmod 777  bruteGB86 (Give script permission to be executed)
+	
+	#!/bin/bash
+	
+	pw="UoMYTrfrBFHyQXmg6gzctqAwOmw1IohZ"
+	for i in $(seq -f "%04g" 0 10000)
+	do
+	    printf "$pw $i" | nc localhost 30002 >> resultsGB86
+	    echo $i >> resultsGB86		     
+	done 
+
+	#!/bin/bash
+	
+	while true; do
+	cat resultsGB86|sort|uniq -u|strings -n 5
+	echo "running"
+	sleep 1
+	done
+
+Subsequently found I could have used {0..9}{0..9}{0..9}{0..9}
+in for loop rather than $(seq -f "%04g" 0 10000). Pincode is
+5669. I used strings -n 5 so that the tried code isn't 
+displayed when checker is running. 
