@@ -1,0 +1,99 @@
+bandit.labs.overthewire.org
+
+1:rioGegei8m
+2:ougahZi8Ta
+3:Ahdiemoo1j
+4:vuH0coox6m
+5:Tith4cokei
+6:UgaoFee4li
+7:ahy7MaeBo9
+
+Useful commands:
+
+0: ls -a
+to find hidden directory ".backup". This contains 
+file bookmarks.html, then 
+	grep password bookmarks.html
+gives password.
+
+1: Used 
+    		strings -n 2 check
+to find human readable strings of minimum length 2 in the 
+check file. Tried some of the results as a password guess.
+The string "sex" caused the user prompt to change. Ran the
+command 
+		whoami
+to find that I was now connected with leviathan2 privileges.
+Finally used,
+		cat /etc/leviathan_pass/leviathan2
+to get the password. 
+
+Later found that using the command ltrace is far more efficient.
+	ltrace ./check 
+After your password guess is put in it shows that it is compared to
+"sex".
+
+2: Again used ltrace. It reveals that access is called before allowing
+cat to be called on the file given. Needed to fool access and get cat
+to be called on the password file. Used,
+	touch /tmp/'123 leviathan3'
+then change directory to /etc/leviathan_pass, then used
+	~/printfile /tmp/'123 leviathan3'.  
+As the file has leviathan 2 permissions the access call passes, but
+then cat is called on /tmp/123 and leviathan3 separately. The executable
+has leviathan 3 permissions so the second call gives the password.
+
+3: Used ltrace, strace and nm to no avail. Then the simple
+	strings level3
+gives some possibilities. A search on the man pages for snlprintf 
+doesn't find anything and as it is followed by [You've got shell]!
+it was worth a try as the password. Indeed snlprintf provides a shell
+with leviathan4 permissions allowing 
+	cat /etc/leviathan_pass/leviathan4
+to succeed.
+
+4: There is a hidden .trash directory in the home directory. In it there
+is an executable called bin. Execute it and it reveals a sequence of 8 digit
+binary numbers. Wanted to convert to ascii characters hoping that
+each binary byte represents a letter in the password. First of
+all I used an online converter. Afterwards I worked out a bash solution.
+Used 
+	./bin>/tmp/convert
+to get a list of the numbers. Then used the following script to first
+turn each binary number to a hexadecimal number before calling printf
+to give its character. Seems like there should be a way to go straight
+from the binary to a character.
+
+#!/bin/bash
+
+for i in 01010100 01101001 01110100 01101000 00110100 01100011 01101111 01101011 01100101 01101001 00001010
+do
+   hex=$(echo "obase=16;ibase=2 ; $i" | bc)
+   printf '\x'$hex
+
+done
+
+5: The executable in the home directory gave the error that it couldn't
+find the file /tmp/file.log. After creating /tmp/file.log
+the file executes fine and prints to the screen what ever is in
+/tmp/file.log. Using ltrace you can see that fopen is called on 
+/tmp/file.log. Created a symbolic link from /tmp/file.log to
+/etc/leviathan_pass/leviathan6 using,
+	ln -s /etc/leviathan_pass/leviathan6 /tmp/file.log
+Executing leviathan5 then gives the password. The executable calls
+/tmp/file.log with the permissions of leviathan6 but then gets linked
+to the password file and so prints that out.
+
+6:Brute forced it with the following script,
+
+#!/bin/bash
+
+cd ~
+
+for i in {0..9}{0..9}{0..9}{0..9}
+do
+    ./leviathan6 $i
+    echo $i
+done
+
+The pincode is 7123.
