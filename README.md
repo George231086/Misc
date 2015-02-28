@@ -1,2 +1,1 @@
-# Misc
-Miscellaneous programs.
+My solutions so far to the overthewire.org war games. I started doing these after setting up a linux virtual machine as a way to become familiar with linux. They're a great way of learning computer security. Hopefully one day I'll have completed them all... 
