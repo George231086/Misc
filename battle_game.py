@@ -51,7 +51,7 @@ class Villain(Fighter):
     '''    
     # The Villain name is passed through super to the base class constructor.
     def __init__(self):
-        super(Villain,self).__init__('Fighter')        
+        super(Villain,self).__init__('Villain')        
         print 'Villain created'
         
     def do_move(self):
