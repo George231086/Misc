@@ -26,7 +26,7 @@ class Fighter(object):
     
     def is_alive(self):
         if self.health>0:
-            return true
+            return True
 
 
          
@@ -84,7 +84,8 @@ class BattleField(object):
             fighter_num = random.randint(0,1)            
             fighters[fighter_num].do_move()
             fighters[(fighter_num+1)%2].health-=10
-            time.sleep(1)
+            # Can add delay to increase the suspense.
+            #time.sleep(1)
         self.announce_winner()
         
 if __name__=='__main__':
