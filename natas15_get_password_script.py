@@ -37,8 +37,8 @@ def get_password():
            result = urllib2.urlopen(request,params)
             
            #Read the response, keep the important part, which we can use
-	         #to test whether the character is the one we want. If it
-	         #is then start looking for the next character. This continues
+	   #to test whether the character is the one we want. If it
+	   #is then start looking for the next character. This continues
            #until we have them all.		 
 	      
            text=result.readlines()
