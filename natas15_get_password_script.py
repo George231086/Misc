@@ -46,8 +46,9 @@ def get_password():
            if decider=='exists':
                  print character
                  string_start+=character
+                 result.close()
                  break
-    
+    	   result.close()	
     print string_start                    
             
 get_password()            
