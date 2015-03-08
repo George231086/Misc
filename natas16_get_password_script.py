@@ -42,8 +42,9 @@ def get_password():
            if text[22].strip()!='African':
                print 'found: '+character
                string_start+=character
+               result.close()
                break
-            
+           result.close() 
       print string_start                    
             
 get_password()            
